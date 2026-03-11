@@ -26,34 +26,38 @@
         async function searchNews() {
     const topic = document.getElementById('topicInput').value;
     const display = document.getElementById('newsResults');
-    const apiKey = "2fc965128b004945be6fe8cbc6e8a745"; // La tua chiave direttamente qui
+    
+    // Usiamo GNews invece di NewsAPI perché è più permissivo con GitHub Pages
+    // Registrati su gnews.io per una chiave se questa scade (è gratis)
+    const apiKey = "677d85440786576856006e8909403f56"; 
     
     if(!topic) return alert("Inserisci un argomento!");
 
-    display.innerHTML = "<p>Caricamento in corso...</p>";
+    display.innerHTML = "<p>Caricamento notizie in corso...</p>";
 
-    // Chiamata diretta all'API senza passare per il PHP
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(topic)}&language=it&sortBy=publishedAt&apiKey=${apiKey}`;
+    // URL per GNews (ottimo per GitHub Pages)
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=it&token=${apiKey}`;
 
     try {
         const response = await fetch(url);
         const data = await response.json();
 
-        if(data.status !== "ok") {
-            display.innerHTML = `<p class="error">Errore API: ${data.message}</p>`;
+        if(!data.articles) {
+            display.innerHTML = `<p class="error">Errore: ${data.errors ? data.errors[0] : 'Limite API raggiunto'}</p>`;
             return;
         }
 
         display.innerHTML = data.articles.map(art => `
             <article class="card">
-                <small>${art.source.name} - ${new Date(art.publishedAt).toLocaleString()}</small>
+                <small>${art.source.name} - ${new Date(art.publishedAt).toLocaleDateString()}</small>
                 <h3>${art.title}</h3>
-                <p>${art.description || 'Nessuna descrizione disponibile'}</p>
-                <a href="${art.url}" target="_blank">Leggi di più</a>
+                <p>${art.description}</p>
+                <a href="${art.url}" target="_blank">Leggi l'articolo originale &rarr;</a>
             </article>
         `).join('');
+
     } catch (err) {
-        display.innerHTML = "<p class='error'>Errore: l'API di NewsAPI potrebbe bloccare le richieste da browser su domini gratuiti.</p>";
+        display.innerHTML = "<p class='error'>Errore di connessione. Riprova tra poco.</p>";
     }
 }
     </script>
@@ -61,3 +65,4 @@
 
 
 </html>
+
