@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <title>News Search Engine</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>News Feed JSON</h1>
+            <div class="search-bar">
+                <input type="text" id="topicInput" placeholder="Es: Politica, Sport, Scienza...">
+                <button onclick="searchNews()">Cerca</button>
+            </div>
+        </header>
+
+        <main id="newsResults">
+            <p class="placeholder">Digita qualcosa per iniziare la ricerca...</p>
+        </main>
+    </div>
+
+    <script>
+        async function searchNews() {
+            const topic = document.getElementById('topicInput').value;
+            const display = document.getElementById('newsResults');
+
+            if (!topic) return alert("Inserisci un argomento!");
+
+            display.innerHTML = "<p>Caricamento in corso...</p>";
+
+            try {
+                const response = await fetch(`parser.php?topic=${encodeURIComponent(topic)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    display.innerHTML = `<p class="error">${data.error}</p>`;
+                    return;
+                }
+
+                display.innerHTML = data.map(art => `
+                    <article class="card">
+                        <small>${art.source} - ${art.date}</small>
+                        <h3>${art.title}</h3>
+                        <p>${art.description}</p>
+                        <a href="${art.url}" target="_blank">Leggi di più</a>
+                    </article>
+                `).join('');
+            } catch (err) {
+                display.innerHTML = "<p class='error'>Errore nella comunicazione con il server.</p>";
+            }
+        }
+    </script>
+</body>
+
+</html>
