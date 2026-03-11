@@ -5,67 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Feed JSON</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
-        .search-row { display: flex; gap: 10px; margin-top: 20px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px; }
-        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        #results { margin-top: 30px; text-align: left; }
-        .news-item { border-bottom: 1px solid #eee; padding: 15px 0; }
-        .news-item h3 { margin: 0 0 5px 0; font-size: 1.1rem; }
-        .news-item a { color: #007bff; text-decoration: none; font-size: 0.9rem; font-weight: bold; }
-        .error-msg { background: #fee; color: #c00; padding: 10px; border-radius: 5px; margin-top: 20px; font-size: 0.9rem; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
+        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .article { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .article:last-child { border: none; }
+        .article h3 { margin: 0 0 8px 0; font-size: 1.1rem; color: #1a1a1a; }
+        .article a { color: #007bff; text-decoration: none; font-size: 0.9rem; font-weight: bold; }
+        .error { color: #d93025; background: #fce8e6; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 0.9rem; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h2>News Feed JSON</h2>
-    <div class="search-row">
-        <input type="text" id="topic" placeholder="Es: Sport, Politica...">
-        <button onclick="getNews()">Cerca</button>
+<div class="container">
+    <h1 style="text-align:center">News Feed JSON</h1>
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Es: Politica, Sport, Scienza...">
+        <button onclick="cercaNotizie()">Cerca</button>
     </div>
-    <div id="results"></div>
+    <div id="risultati"></div>
 </div>
 
 <script>
-async function getNews() {
-    const topic = document.getElementById('topic').value;
-    const resDiv = document.getElementById('results');
-    const apiKey = "10c06e699933e0bea05ca53e6929f79f"; // La tua chiave GNews
+async function cercaNotizie() {
+    const query = document.getElementById('query').value;
+    const risultatiDiv = document.getElementById('risultati');
+    const apiKey = "10c06e699933e0bea05ca53e6929f79f";
     
-    if(!topic) return;
-    resDiv.innerHTML = "<em>Caricamento...</em>";
+    if(!query) return alert("Inserisci un argomento");
 
-    // Nota l'uso di HTTPS e dei parametri corretti per GNews
-    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=it&country=it&max=5&token=${apiKey}`;
+    risultatiDiv.innerHTML = "<p style='text-align:center'>Caricamento in corso...</p>";
+
+    // Utilizziamo un proxy pubblico per bypassare l'errore CORS che vedi nella console
+    // Questo aggiunge gli header necessari affinché GitHub Pages possa leggere il JSON
+    const proxy = "https://corsproxy.io/?"; 
+    const apiUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=it&country=it&max=10&token=${apiKey}`;
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(proxy + encodeURIComponent(apiUrl));
         
-        if (!response.ok) {
-            throw new Error(`Errore HTTP: ${response.status}`);
-        }
+        if (!response.ok) throw new Error("Errore nella risposta del server");
 
         const data = await response.json();
 
         if (data.articles && data.articles.length > 0) {
-            resDiv.innerHTML = data.articles.map(art => `
-                <div class="news-item">
-                    <small>${art.source.name}</small>
+            risultatiDiv.innerHTML = data.articles.map(art => `
+                <div class="article">
+                    <small style="color:#888">${art.source.name} • ${new Date(art.publishedAt).toLocaleDateString('it-IT')}</small>
                     <h3>${art.title}</h3>
-                    <a href="${art.url}" target="_blank">Leggi notizia →</a>
+                    <a href="${art.url}" target="_blank">Leggi l'articolo originale →</a>
                 </div>
             `).join('');
         } else {
-            resDiv.innerHTML = "Nessun risultato trovato.";
+            risultatiDiv.innerHTML = "<p>Nessun risultato trovato. Prova con un'altra parola.</p>";
         }
 
-    } catch (err) {
-        resDiv.innerHTML = `<div class="error-msg">
-            <strong>Errore:</strong> ${err.message}<br>
-            Assicurati che la chiave API sia attiva e di non aver superato il limite giornaliero (100 ricerche).
-        </div>`;
+    } catch (error) {
+        risultatiDiv.innerHTML = `
+            <div class="error">
+                <strong>Errore CORS o di Connessione:</strong><br>
+                Il browser blocca la richiesta. Assicurati che la chiave API sia corretta o riprova tra qualche minuto.<br>
+                <small>Dettaglio: ${error.message}</small>
+            </div>`;
     }
 }
 </script>
