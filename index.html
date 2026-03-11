@@ -1,68 +1,96 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
     <meta charset="UTF-8">
-    <title>News Search Engine</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Feed JSON - GNews</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .search-bar { display: flex; gap: 10px; justify-content: center; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 5px; width: 60%; font-size: 16px; }
+        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .card h3 { margin: 10px 0; color: #111; font-size: 1.4rem; }
+        .card p { color: #555; line-height: 1.5; }
+        .card .meta { font-size: 0.85rem; color: #888; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .card a { color: #007bff; text-decoration: none; font-weight: bold; border-bottom: 2px solid transparent; }
+        .card a:hover { border-bottom: 2px solid #007bff; }
+        .loader { text-align: center; font-style: italic; color: #666; }
+        .error { color: #d93025; background: #fce8e6; padding: 15px; border-radius: 5px; text-align: center; }
+    </style>
 </head>
-
 <body>
-    <div class="container">
-        <header>
-            <h1>News Feed JSON</h1>
-            <div class="search-bar">
-                <input type="text" id="topicInput" placeholder="Es: Politica, Sport, Scienza...">
-                <button onclick="searchNews()">Cerca</button>
-            </div>
-        </header>
 
-        <main id="newsResults">
-            <p class="placeholder">Digita qualcosa per iniziare la ricerca...</p>
-        </main>
-    </div>
+<div class="container">
+    <header>
+        <h1>News Feed JSON</h1>
+        <div class="search-bar">
+            <input type="text" id="topicInput" placeholder="Cerca: politica, sport, attualità...">
+            <button onclick="searchNews()">Cerca</button>
+        </div>
+    </header>
 
-    <script>
-        async function searchNews() {
-    const topic = document.getElementById('topicInput').value;
-    const display = document.getElementById('newsResults');
-    
-    // Usiamo GNews invece di NewsAPI perché è più permissivo con GitHub Pages
-    // Registrati su gnews.io per una chiave se questa scade (è gratis)
-    const apiKey = "677d85440786576856006e8909403f56"; 
-    
-    if(!topic) return alert("Inserisci un argomento!");
+    <main id="newsResults">
+        <p style="text-align: center; color: #888;">Inserisci un argomento per visualizzare le ultime notizie in tempo reale.</p>
+    </main>
+</div>
 
-    display.innerHTML = "<p>Caricamento notizie in corso...</p>";
-
-    // URL per GNews (ottimo per GitHub Pages)
-    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=it&token=${apiKey}`;
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if(!data.articles) {
-            display.innerHTML = `<p class="error">Errore: ${data.errors ? data.errors[0] : 'Limite API raggiunto'}</p>`;
+<script>
+    async function searchNews() {
+        const topic = document.getElementById('topicInput').value;
+        const display = document.getElementById('newsResults');
+        
+        // La tua chiave GNews
+        const apiKey = "10c06e699933e0bea05ca53e6929f79f"; 
+        
+        if(!topic) {
+            alert("Per favore, inserisci un termine di ricerca.");
             return;
         }
 
-        display.innerHTML = data.articles.map(art => `
-            <article class="card">
-                <small>${art.source.name} - ${new Date(art.publishedAt).toLocaleDateString()}</small>
-                <h3>${art.title}</h3>
-                <p>${art.description}</p>
-                <a href="${art.url}" target="_blank">Leggi l'articolo originale &rarr;</a>
-            </article>
-        `).join('');
+        display.innerHTML = "<p class='loader'>Ricerca in corso tra le testate giornalistiche...</p>";
 
-    } catch (err) {
-        display.innerHTML = "<p class='error'>Errore di connessione. Riprova tra poco.</p>";
+        // URL GNews ottimizzato per l'Italia
+        const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=it&country=it&max=10&token=${apiKey}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.errors) {
+                display.innerHTML = `<div class="error">Errore API: ${data.errors[0]}</div>`;
+                return;
+            }
+
+            if (!data.articles || data.articles.length === 0) {
+                display.innerHTML = `<p style="text-align:center;">Nessun articolo trovato per "<strong>${topic}</strong>". Prova con un'altra parola chiave.</p>`;
+                return;
+            }
+
+            // Generazione dinamica delle card
+            display.innerHTML = data.articles.map(art => `
+                <article class="card">
+                    <div class="meta">${art.source.name} • ${new Date(art.publishedAt).toLocaleDateString('it-IT')}</div>
+                    <h3>${art.title}</h3>
+                    <p>${art.description || 'Nessuna descrizione disponibile per questo articolo.'}</p>
+                    <a href="${art.url}" target="_blank">Leggi l'articolo completo &rarr;</a>
+                </article>
+            `).join('');
+
+        } catch (err) {
+            display.innerHTML = "<div class='error'>Errore di connessione. Verifica la tua connessione internet o la validità della chiave API.</div>";
+        }
     }
-}
-    </script>
+
+    // Permette di premere "Invio" per cercare
+    document.getElementById('topicInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') searchNews();
+    });
+</script>
+
 </body>
-
-
 </html>
-
