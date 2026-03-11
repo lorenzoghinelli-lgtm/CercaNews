@@ -24,35 +24,40 @@
 
     <script>
         async function searchNews() {
-            const topic = document.getElementById('topicInput').value;
-            const display = document.getElementById('newsResults');
+    const topic = document.getElementById('topicInput').value;
+    const display = document.getElementById('newsResults');
+    const apiKey = "2fc965128b004945be6fe8cbc6e8a745"; // La tua chiave direttamente qui
+    
+    if(!topic) return alert("Inserisci un argomento!");
 
-            if (!topic) return alert("Inserisci un argomento!");
+    display.innerHTML = "<p>Caricamento in corso...</p>";
 
-            display.innerHTML = "<p>Caricamento in corso...</p>";
+    // Chiamata diretta all'API senza passare per il PHP
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(topic)}&language=it&sortBy=publishedAt&apiKey=${apiKey}`;
 
-            try {
-                const response = await fetch(`parser.php?topic=${encodeURIComponent(topic)}`);
-                const data = await response.json();
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
 
-                if (data.error) {
-                    display.innerHTML = `<p class="error">${data.error}</p>`;
-                    return;
-                }
-
-                display.innerHTML = data.map(art => `
-                    <article class="card">
-                        <small>${art.source} - ${art.date}</small>
-                        <h3>${art.title}</h3>
-                        <p>${art.description}</p>
-                        <a href="${art.url}" target="_blank">Leggi di più</a>
-                    </article>
-                `).join('');
-            } catch (err) {
-                display.innerHTML = "<p class='error'>Errore nella comunicazione con il server.</p>";
-            }
+        if(data.status !== "ok") {
+            display.innerHTML = `<p class="error">Errore API: ${data.message}</p>`;
+            return;
         }
+
+        display.innerHTML = data.articles.map(art => `
+            <article class="card">
+                <small>${art.source.name} - ${new Date(art.publishedAt).toLocaleString()}</small>
+                <h3>${art.title}</h3>
+                <p>${art.description || 'Nessuna descrizione disponibile'}</p>
+                <a href="${art.url}" target="_blank">Leggi di più</a>
+            </article>
+        `).join('');
+    } catch (err) {
+        display.innerHTML = "<p class='error'>Errore: l'API di NewsAPI potrebbe bloccare le richieste da browser su domini gratuiti.</p>";
+    }
+}
     </script>
 </body>
+
 
 </html>
