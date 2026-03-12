@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Hub - Versione GitHub</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .header { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; margin-bottom: 25px; }
+        input { padding: 12px; width: 60%; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .card { background: white; padding: 20px; margin-bottom: 15px; border-radius: 10px; border-left: 6px solid #007bff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .source-name { color: #007bff; font-weight: bold; font-size: 0.8em; text-transform: uppercase; }
+        .error { background: #fee2e2; color: #dc2626; padding: 15px; border-radius: 8px; text-align: center; }
+        .loader { text-align: center; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🗞️ Aggregatore News</h1>
+        <p>Digita <strong>politica</strong> o <strong>sport</strong></p>
+        <input type="text" id="catInput" placeholder="Esempio: politica...">
+        <button onclick="caricaNotizie()">Cerca</button>
+    </div>
+
+    <div id="display"></div>
+</div>
+
+<script>
+async function caricaNotizie() {
+    const query = document.getElementById('catInput').value.toLowerCase().trim();
+    const display = document.getElementById('display');
+    
+    const fonti = {
+        "politica": [
+            "https://www.ansa.it/sito/notizie/politica/politica_rss.xml",
+            "https://www.ilfattoquotidiano.it/politica/feed/",
+            "https://ilmanifesto.it/feed/",
+            "https://www.liberoquotidiano.it/rss/politica.xml",
+            "https://www.repubblica.it/rss/politica/rss2.0.xml",
+            "https://xml2.corriereobjects.it/rss/politica.xml"
+        ],
+        "sport": [
+            "https://sport.sky.it/rss/sport_all.xml",
+            "https://www.gazzetta.it/rss/home.xml",
+            "https://www.corrieredellosport.it/rss/calcio",
+            "https://www.rainews.it/rss/sport",
+            "https://it.eurosport.com/rss.xml"
+        ]
+    };
+
+    if (!fonti[query]) {
+        display.innerHTML = '<div class="error">⚠️ Categoria non valida. Prova con "politica" o "sport".</div>';
+        return;
+    }
+
+    display.innerHTML = '<p class="loader">Interrogando i feed (conversione XML in JSON)...</p>';
+
+    let htmlContenuto = "";
+    
+    try {
+        // Cicliamo su tutte le URL della categoria scelta
+        for (const url of fonti[query]) {
+            // Usiamo il servizio rss2json (gratuito) per bypassare il CORS e avere JSON
+            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+            
+            try {
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    data.items.slice(0, 3).forEach(item => { // Primi 3 articoli per ogni testata
+                        htmlContenuto += `
+                            <div class="card">
+                                <div class="source-name">${data.feed.title || 'Fonte'}</div>
+                                <h3>${item.title}</h3>
+                                <p>${item.description.replace(/<[^>]*>?/gm, '').substring(0, 180)}...</p>
+                                <a href="${item.link}" target="_blank">Leggi articolo →</a>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (e) {
+                console.warn("Impossibile caricare: " + url);
+            }
+        }
+        
+        display.innerHTML = htmlContenuto || '<div class="error">Nessuna notizia disponibile al momento.</div>';
+        
+    } catch (err) {
+        display.innerHTML = '<div class="error">⚠️ Errore di connessione. Riprova.</div>';
+    }
+}
+</script>
+
+</body>
+</html>
